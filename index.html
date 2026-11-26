@@ -1605,7 +1605,7 @@ function dismissOnb(){
 let audioKicked=false;
 function kickAudio(){if(audioKicked)return;audioKicked=true;Snd.init();
   if(G.state==='play'||G.state==='intro'||G.state==='dying'){const L=LEVELS[G.level-1];Snd.stop();Snd.play(L.song,G.level)}}
-const SHOW_TIPS=true;                                            // in-game controls card + tips (the CrazyGames build turns this on)
+const SHOW_TIPS=false;                                           // no in-game controls card or tips
 /* ================= FULL SCREEN + LANDSCAPE (phones) ================= */
 const ALLOW_FS=false;                                               // the CrazyGames build turns this off (they provide fullscreen)
 const isIOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
