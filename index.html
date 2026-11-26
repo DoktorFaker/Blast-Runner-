@@ -39,7 +39,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidd
 body.touch .chip.dup{display:none}
 .chip{font-family:var(--display);font-size:8px;padding:5px 6px;border-radius:4px;background:var(--panel);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
 .tools{display:flex;gap:6px;margin-left:auto}
-.tool{font-family:var(--display);font-size:9px;min-width:42px;height:34px;padding:0 8px;border-radius:8px;cursor:pointer;
+.tool{font-family:var(--display);font-size:9px;min-width:34px;height:34px;padding:0 8px;border-radius:8px;cursor:pointer;
   background:var(--panel);color:var(--ink);border:1px solid var(--line)}
 .tool[aria-pressed="false"]{color:var(--dim);text-decoration:line-through}
 #bPad2[aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan)}
@@ -327,6 +327,7 @@ body:not(.touchdev) .note:not(.warn){display:none}
       <button id="bMusic" class="tool" aria-pressed="true" title="Music on/off">MUS</button>
       <button id="bSfx" class="tool" aria-pressed="true" title="Sound effects on/off">SFX</button>
       <button id="bPad" class="tool" aria-pressed="false" title="Show or hide the on-screen arrow pad">✥ D-PAD</button>
+      <button id="bSkip" class="tool" title="Next song (N)" aria-label="Next song">⏭</button>
       <button id="bDance" class="tool" data-pad="⧉" title="Dance (E / View)" aria-label="Dance">♪</button>
       <button id="bFull" class="tool" title="Full screen" aria-label="Full screen">⛶</button>
       <button id="bPause" class="tool" data-pad="☰" title="Pause (P / Menu)">II</button>
@@ -497,6 +498,7 @@ const Snd=(()=>{
     return (pick.k&&levelAudio(pick.k))||track;
   }
   function newSong(){pick=null}
+  function skipSong(){const n=song&&song.name;if(!n||!GAME.includes(n)||n==='title')return false;pick=null;stop();play(n,curLvl);return true}
   const GAME=['title','stageA','stageB','boss'];
   let musicOn=store.get('br_music',true),sfxOn=store.get('br_sfx',true),pm=false;
   const holds=new Set();const mm=()=>!musicOn||pm;
@@ -805,7 +807,7 @@ const Snd=(()=>{
       fireGain=ctx.createGain();fireGain.gain.value=.0001;fireSrc.connect(f);f.connect(f2);f2.connect(fireGain);fireGain.connect(sfxDry);fireSrc.start()}
     if(fireGain)fireGain.gain.setTargetAtTime(Math.max(.0001,v),now(),.25);
   }
-  return{init,play,stop,setRate,fx,setTrack,fireLevel,newSong,
+  return{init,play,stop,setRate,fx,setTrack,fireLevel,newSong,skipSong,
     get trackName(){return trackName},onTrackChange(fn){onTrack=fn},
     get music(){return musicOn},get sfx(){return sfxOn},
     current:()=>song&&song.name,
@@ -1746,7 +1748,7 @@ function setPause(on){
 /* ================= RENDER ================= */
 const cv=$('game');let cx=cv.getContext('2d');
 let R=1,floorC=null,softImg=null,vignette=null,hardCube=null,hardCubeB=null,softCube=null;
-const DEP=20;   /* 2.5D: height of the visible front face of walls and blocks */
+const DEP=14;   /* 2.5D: height of the visible front face of walls and blocks */
 function mk(w,h,fn){const c=document.createElement('canvas');c.width=Math.ceil(w*R);c.height=Math.ceil(h*R);const g=c.getContext('2d');g.scale(R,R);fn(g);return c}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function drawHard(g,x,y,border,th){
@@ -1969,6 +1971,7 @@ function drawPlayer(p){
   const bob=(p.moving?Math.abs(Math.sin(p.anim))*2.5:Math.sin(t*3)*.8)+lift;
   const side=face==='left'?-1:face==='right'?1:0;
   if(p.alive)shadow(0,17,13*(1-lift/40),4);
+  if(p.alive&&!p.preview){cx.globalCompositeOperation='lighter';glow(0,14,26,sk.acc||'#3ee8ff',.32);cx.globalCompositeOperation='source-over';cx.strokeStyle=sk.acc||'#3ee8ff';cx.globalAlpha*=.55;cx.lineWidth=1.5;cx.beginPath();cx.ellipse(0,16,15,5,0,0,7);cx.stroke();cx.globalAlpha/=.55}
   if(sk.spr&&HERO[sk.spr]&&HERO[sk.spr].v){drawHero(p,sk,step,bob,face)}else{
   if(sk.extra==='ghost')cx.globalAlpha*=.62;
   if(sk.extra==='frost'){cx.globalCompositeOperation='lighter';glow(0,-2,28,'#bfe8ff',.35);cx.globalCompositeOperation='source-over'}
@@ -2158,11 +2161,11 @@ function drawHero(p,sk,step,bob,face){
   const o=HERO[sk.spr],t=G.t,H=o.h,W=H*o.v.width/o.v.height,sw=o.v.width,sh=o.v.height,ly=sh*o.legY,mx=sw*o.mid;
   const flip=face==='left'?-1:1,mv=!!(p.moving&&p.alive),ph=p.anim||0;
   cx.save();cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';
-  cx.translate(0,15-bob*.6);if(mv)cx.rotate(Math.sin(ph)*.045);
+  cx.translate(0,11-bob*.6);if(mv)cx.rotate(Math.sin(ph)*.045);
   const br=mv?1:1+Math.sin(t*2.4)*.014;cx.scale(flip,br);
   const a0=cx.globalAlpha;
   /* neon rim so the dark armour reads on dark floors */
-  const sc=W/sw,P=8*sc;cx.globalAlpha=a0*(.5+.15*Math.sin(t*4));cx.drawImage(o.ol,-W/2-P,-H-P,W+2*P,H+2*P);cx.globalAlpha=a0;
+  const sc=W/sw,P=8*sc;cx.globalAlpha=a0*(.85+.15*Math.sin(t*4));cx.drawImage(o.ol,-W/2-P,-H-P,W+2*P,H+2*P);cx.globalAlpha=a0;
   /* legs: each one steps on its own */
   const la=mv?Math.max(0,Math.sin(ph))*3.2:0,ra=mv?Math.max(0,-Math.sin(ph))*3.2:0,lsk=mv?Math.sin(ph)*.06:0;
   const legTop=-H+H*o.legY,legH=H*(1-o.legY);
@@ -2387,7 +2390,7 @@ function render(){
   const ents=G.enemies.slice();
   const list=ents.map(e=>({y:e.y,f:()=>drawEnemy(e)}));
   for(const b of G.bombs)list.push({y:(b.py!=null?b.py:b.y*T+T/2)-1,f:()=>drawBomb(b)});
-  for(let y=0;y<H;y++)list.push({y:y*T+T/2-2,f:()=>drawRow(y)});
+  for(let y=0;y<H;y++)drawRow(y);
   if(G.player)list.push({y:G.player.y,f:()=>drawPlayer(G.player)});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
   drawPortals();drawGems();drawFires();drawGrens();drawShells();drawRockets();drawFlames();drawSpecials();drawRings();drawParts();drawCombo();
@@ -2424,6 +2427,7 @@ addEventListener('keydown',e=>{
   else if(e.code==='KeyF'||e.code==='KeyO')fireSpecial();
   else if(e.code==='KeyQ')cycleWeapon();
   else if(e.code==='KeyE')startDance();
+  else if(e.code==='KeyN')$('bSkip').click();
   else if(e.code==='KeyR')fireNova();
   else if(e.code==='KeyP')setPause(!G.paused);                  // Escape is left alone: browsers use it to exit fullscreen
   else if(e.code==='Enter'&&G.state==='title'&&!$('ovTitle').hidden){e.preventDefault();newGame(1)}
@@ -2511,6 +2515,7 @@ document.addEventListener('pointerdown',()=>document.querySelectorAll('.padfocus
 
 /* ================= BUTTONS ================= */
 function syncToggles(){$('bMusic').setAttribute('aria-pressed',Snd.music);$('bSfx').setAttribute('aria-pressed',Snd.sfx)}
+$('bSkip').onclick=e=>{Snd.init();if(!Snd.music){Snd.setMusic(true);syncToggles()}Snd.skipSong();if(e.currentTarget)e.currentTarget.blur()};
 $('bMusic').onclick=()=>{Snd.init();Snd.setMusic(!Snd.music);syncToggles()};
 $('bSfx').onclick=()=>{Snd.init();Snd.setSfx(!Snd.sfx);syncToggles();Snd.fx.ui()};
 $('bPause').onclick=()=>setPause(!G.paused);
