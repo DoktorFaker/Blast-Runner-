@@ -462,14 +462,17 @@ const Snd=(()=>{
       a.src=L.url;L.a=a}
     return L.a;
   }
-  let pick=null,lastKey=-1;
+  let pick=null,lastKey=-1,bag=[];
   const L_failed=a=>{for(const k in LEVEL_SONGS)if(LEVEL_SONGS[k].a===a)return LEVEL_SONGS[k].failed;return false};
   function songFor(lvl){
     if(!lvl){lastKey=0;return track}                                  // title screen: main song
-    if(!pick){
-      const pool=[...Object.keys(LEVEL_SONGS).filter(k=>!LEVEL_SONGS[k].failed).map(Number)];
-      const fresh=pool.filter(k=>k!==lastKey),from=fresh.length?fresh:pool;
-      pick={k:from.length?from[Math.random()*from.length|0]:0};lastKey=pick.k;
+    if(!pick){                                                      // shuffle bag: every song plays once before any repeats, never twice in a row
+      const ok=k=>LEVEL_SONGS[k]&&!LEVEL_SONGS[k].failed;
+      bag=bag.filter(ok);
+      if(!bag.length){bag=Object.keys(LEVEL_SONGS).map(Number).filter(ok);
+        for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}
+        if(bag.length>1&&bag[0]===lastKey)bag.push(bag.shift())}
+      pick={k:bag.length?bag.shift():0};lastKey=pick.k;
     }
     return (pick.k&&levelAudio(pick.k))||track;
   }
@@ -1478,7 +1481,7 @@ function update(dt){
   G.t+=dt;updParts(dt);
   const s=G.state;
   if(s==='title'){updEnemies(dt);updWorld(dt);return}
-  if(s==='intro'){G.timer-=dt;if(G.timer<=0){G.state='play';G.banner=null;CG.start();startTut();Snd.play(LEVELS[G.level-1].song,G.level)}return}
+  if(s==='intro'){G.timer-=dt;if(G.timer<=0){G.state='play';G.banner=null;CG.start();startTut();Snd.play(LEVELS[(G.level-1)%LEVELS.length].song,G.level)}return}
   if(s==='play'&&G.waiting){updParts(dt);return}
   if(s==='play'||s==='dying'){
     if(s==='play'){
@@ -1604,7 +1607,7 @@ function dismissOnb(){
 /* first gesture: browsers only allow sound after it, so (re)start the stage's song then */
 let audioKicked=false;
 function kickAudio(){if(audioKicked)return;audioKicked=true;Snd.init();
-  if(G.state==='play'||G.state==='intro'||G.state==='dying'){const L=LEVELS[G.level-1];Snd.stop();Snd.play(L.song,G.level)}}
+  if(G.state==='play'||G.state==='intro'||G.state==='dying'){const L=LEVELS[(G.level-1)%LEVELS.length];Snd.stop();Snd.play(L.song,G.level)}}
 const SHOW_TIPS=false;                                           // no in-game controls card or tips
 /* ================= FULL SCREEN + LANDSCAPE (phones) ================= */
 const ALLOW_FS=false;                                               // the CrazyGames build turns this off (they provide fullscreen)
