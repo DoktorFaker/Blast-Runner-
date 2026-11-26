@@ -1020,7 +1020,7 @@ function tryMove(e,dx,dy,d){
 const diff=n=>Math.max(0,(n||G.level)-1);
 function mkEnemy(type,x,y){const t=ET[type],d=diff();
   const spd=Math.min(Math.max(t.spd,3),t.spd*(1+.06*d)),chase=t.chase?Math.min(.95,t.chase+.04*d):(d>=3?Math.min(.35,.05*(d-2)):0);
-  return{type,t,spd,chase,turn:Math.min(.6,t.turn+.02*d),x:x*T+T/2,y:y*T+T/2,dx:0,dy:0,hp:(t.hp||1)+(type===BOSS?Math.floor(d/4):0),hurt:0,dead:0,phase:Math.random()*6,wall:t.wall,bombpass:false,spawn:.5}}
+  return{type,t,spd,chase,turn:Math.min(.6,t.turn+.02*d),x:x*T+T/2,y:y*T+T/2,dx:0,dy:0,hp:(t.hp||1)+(type===BOSS?Math.floor(d/4):0),hurt:0,dead:0,phase:Math.random()*6,wall:false,bombpass:false,spawn:.5}}
 function genLevel(n){
   const L=LEVELS[(n-1)%LEVELS.length];G.theme=THEMES[(n-1)%THEMES.length];
   const g=[];
@@ -1745,7 +1745,8 @@ function setPause(on){
 
 /* ================= RENDER ================= */
 const cv=$('game');let cx=cv.getContext('2d');
-let R=1,floorC=null,softImg=null,vignette=null;
+let R=1,floorC=null,softImg=null,vignette=null,hardCube=null,hardCubeB=null,softCube=null;
+const DEP=20;   /* 2.5D: height of the visible front face of walls and blocks */
 function mk(w,h,fn){const c=document.createElement('canvas');c.width=Math.ceil(w*R);c.height=Math.ceil(h*R);const g=c.getContext('2d');g.scale(R,R);fn(g);return c}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function drawHard(g,x,y,border,th){
@@ -1846,11 +1847,22 @@ function buildStatic(){
     g.strokeStyle=th.line;g.globalAlpha=.07;g.lineWidth=1;
     for(let x=0;x<=W;x++){g.beginPath();g.moveTo(x*T+.5,0);g.lineTo(x*T+.5,H*T);g.stroke()}
     for(let y=0;y<=H;y++){g.beginPath();g.moveTo(0,y*T+.5);g.lineTo(W*T,y*T+.5);g.stroke()}
-    g.globalAlpha=1;g.fillStyle='rgba(0,0,0,.42)';
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(G.grid[y][x]===1){rr(g,x*T+5,y*T+8,T,T,9);g.fill()}
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(G.grid[y][x]===1)drawHard(g,x*T,y*T,x===0||y===0||x===W-1||y===H-1,th);
+    g.globalAlpha=1;
+    /* soft cast shadows to the lower right, so every wall reads as a raised block */
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(G.grid[y][x]===1){const gr=g.createLinearGradient(x*T,y*T,x*T+T*.6,y*T+T*.9);gr.addColorStop(0,'rgba(0,0,0,.5)');gr.addColorStop(1,'rgba(0,0,0,0)');
+      g.fillStyle=gr;g.beginPath();g.moveTo(x*T+T,y*T);g.lineTo(x*T+T+14,y*T+10);g.lineTo(x*T+T+14,y*T+T+10);g.lineTo(x*T+12,y*T+T+10);g.lineTo(x*T,y*T+T);g.closePath();g.fill()}
   });
   softImg=mk(T,T,g=>drawBlock(g,th));
+  const cube=(top,c1,c2,edge)=>mk(T,T+DEP,g=>{
+    const gr=g.createLinearGradient(0,T-6,0,T+DEP);gr.addColorStop(0,c1);gr.addColorStop(1,c2);g.fillStyle=gr;rr(g,1,T-10,T-2,DEP+9,7);g.fill();
+    g.fillStyle='rgba(255,255,255,.08)';g.fillRect(4,T,T-8,2);
+    if(edge){g.globalAlpha=.55;g.fillStyle=edge;g.fillRect(6,T+DEP-5,T-12,1.5);g.globalAlpha=1}
+    g.fillStyle='rgba(0,0,0,.35)';g.fillRect(3,T+DEP-3,T-6,2);
+    top(g);
+    g.fillStyle='rgba(255,255,255,.1)';g.fillRect(6,2,T-12,1.5)});
+  hardCube=cube(g=>drawHard(g,0,0,false,th),th.h2,'#05040c',th.acc);
+  hardCubeB=cube(g=>drawHard(g,0,0,true,th),th.h2,'#05040c',null);
+  softCube=cube(g=>{g.drawImage(softImg,0,0,T,T)},th.s2,'#0a0508',null);
   drawSky(th);
   vignette=mk(W*T,H*T,g=>{const gr=g.createRadialGradient(W*T/2,H*T/2,H*T*.3,W*T/2,H*T/2,W*T*.72);
     gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.5)');g.fillStyle=gr;g.fillRect(0,0,W*T,H*T)});
@@ -2199,7 +2211,6 @@ function drawEnemy(e){
     case 'turtle':{const w=Math.sin(tt*(mv?10:2));rot=w*(mv?.08:.02);oy=-Math.abs(w)*(mv?2.5:0);break}
     case 'golem':{const w=Math.sin(tt*(mv?6:2.2));oy=-Math.abs(w)*(mv?3:1);rot=w*(mv?.05:.015);const br=1+Math.sin(tt*2.2)*.025;sx*=br;sy*=2-br;break}
   }
-  if(t.wall&&!e.dead)al*=.9;
   cx.translate(ox,bottom+oy);cx.rotate(rot);if(sk)cx.transform(1,0,sk,1,0,0);cx.scale(sx*flip,sy);
   const W2=c.w,H2=c.h,dx0=-W2/2,dy0=-H2;
   cx.globalAlpha*=al;
@@ -2354,23 +2365,29 @@ function drawText(s,x,y,size,c,align){
   cx.font=size+'px "Press Start 2P", monospace';cx.textAlign=align||'center';cx.textBaseline='middle';
   cx.lineWidth=Math.max(3,size/4);cx.strokeStyle='#0b0718';cx.strokeText(s,x,y);cx.fillStyle=c;cx.fillText(s,x,y);
 }
+function drawRow(y){
+  for(let x=0;x<W;x++){const c=G.grid[y][x],px=x*T,py=y*T-DEP;
+    if(c===1)cx.drawImage((x===0||y===0||x===W-1||y===H-1)?hardCubeB:hardCube,px,py,T,T+DEP);
+    else if(c===2)cx.drawImage(softCube,px,py,T,T+DEP);
+    else if(c===3){const p=1-(G.breaking.get(y*W+x)||0)/.5,s=1-p*.4;
+      cx.globalAlpha=1-p;cx.drawImage(softCube,px+T/2-T*s/2,py+(T+DEP)*(1-s),T*s,(T+DEP)*s);cx.globalAlpha=1}}
+}
 function render(){
   cx.setTransform(R,0,0,R,0,0);cx.fillStyle='#07060f';cx.fillRect(0,0,W*T,H*T);
   if(!floorC)return;
   cx.save();
   if(G.shake>0)cx.translate(rnd(-1,1)*G.shake*.5,rnd(-1,1)*G.shake*.5);
+  {const k=(H*T)/(H*T+DEP);cx.scale(1,k);cx.translate(0,DEP)}      /* 2.5D: room for the raised top row */
   cx.drawImage(floorC,0,0,W*T,H*T);
   if(G.exit)drawExit();
   for(const [k,type] of G.items){const x=k%W,y=Math.floor(k/W);if(G.grid[y][x]===0)drawItem(x,y,type)}
-  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
-    const c=G.grid[y][x];
-    if(c===2){cx.fillStyle='rgba(0,0,0,.35)';rr(cx,x*T+5,y*T+7,T-4,T-4,8);cx.fill();cx.drawImage(softImg,x*T,y*T,T,T)}
-    else if(c===3){const p=1-(G.breaking.get(y*W+x)||0)/.5,s=1-p*.4;
-      cx.globalAlpha=1-p;cx.drawImage(softImg,x*T+T/2-T*s/2,y*T+T/2-T*s/2,T*s,T*s);cx.globalAlpha=1}
-  }
-  for(const b of G.bombs)drawBomb(b);
+  /* floor shadows of breakable blocks */
+  cx.fillStyle='rgba(0,0,0,.32)';
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(G.grid[y][x]===2){cx.beginPath();cx.moveTo(x*T+T,y*T);cx.lineTo(x*T+T+12,y*T+9);cx.lineTo(x*T+T+12,y*T+T+9);cx.lineTo(x*T+10,y*T+T+9);cx.lineTo(x*T,y*T+T);cx.closePath();cx.fill()}
   const ents=G.enemies.slice();
   const list=ents.map(e=>({y:e.y,f:()=>drawEnemy(e)}));
+  for(const b of G.bombs)list.push({y:(b.py!=null?b.py:b.y*T+T/2)-1,f:()=>drawBomb(b)});
+  for(let y=0;y<H;y++)list.push({y:y*T+T/2-2,f:()=>drawRow(y)});
   if(G.player)list.push({y:G.player.y,f:()=>drawPlayer(G.player)});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
   drawPortals();drawGems();drawFires();drawGrens();drawShells();drawRockets();drawFlames();drawSpecials();drawRings();drawParts();drawCombo();
