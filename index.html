@@ -1424,6 +1424,11 @@ function updEnemies(dt){
     creatureFx(e,dt);
     const d=e.spd*T*dt*(e.hurt>0?.5:1);
     if(!e.dx&&!e.dy){chooseDir(e,true);if(!e.dx&&!e.dy)continue}
+    /* bounce off bombs: check the square the enemy is heading into every frame, not only at cell centres */
+    if(!e.bombpass&&(e.dx||e.dy)){const cx0=cell(e.x),cy0=cell(e.y),lx=cell(e.x+e.dx*(T/2+d+1)),ly=cell(e.y+e.dy*(T/2+d+1));
+      if((lx!==cx0||ly!==cy0)&&bombAt(lx,ly)){e.dx=-e.dx;e.dy=-e.dy;e.bounce=.25;
+        const c=(visOf(e)||{}).g||'#ffffff';for(let i=0;i<6;i++)G.parts.push({x:e.x+e.dx*-14,y:e.y+e.dy*-14,vx:rnd(-90,90)-e.dx*60,vy:rnd(-90,90)-e.dy*60,life:rnd(.2,.4),max:.4,c,s:rnd(1.5,2.5),add:1})}}
+    if(e.bounce>0)e.bounce-=dt;
     const ccx=cell(e.x)*T+T/2,ccy=cell(e.y)*T+T/2;
     const toC=e.dx?(ccx-e.x)*e.dx:(ccy-e.y)*e.dy;
     if(toC>0&&toC<=d){
@@ -2240,6 +2245,7 @@ function drawEnemy(e){
   if(e.dx)e.face=e.dx;
   const flip=(e.face||c.f)!==c.f?-1:1;
   cx.save();cx.translate(e.x,e.y);
+  if(e.bounce>0){const k=e.bounce/.25;cx.translate(0,-Math.sin(k*Math.PI)*6);cx.scale(1+k*.12,1-k*.12)}
   if(e.dead){const d=e.dead/.7;cx.globalAlpha=Math.max(0,1-d);cx.scale(1+d*.5,1-d*.6)}
   if(e.spawn>0){const s=1-e.spawn/.5;cx.globalAlpha=s;cx.scale(.4+.6*s,.4+.6*s)}
   const floaty=c.a==='ghost'||c.a==='jelly'||c.a==='ship'||c.a==='dstar';
