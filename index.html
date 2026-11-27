@@ -496,17 +496,18 @@ const Snd=(()=>{
       a.src=L.url;L.a=a}
     return L.a;
   }
-  let pick=null,lastKey=store.get('br_lastSong',-1),bag=store.get('br_songBag2',[]);   // remembered between visits, so every game start gets a fresh song
+  let pick=null,lastKey=store.get('br_lastSong',-1),bag=store.get('br_songBag3',[]);   // remembered between visits, so every game start gets a fresh song
   const L_failed=a=>{for(const k in LEVEL_SONGS)if(LEVEL_SONGS[k].a===a)return LEVEL_SONGS[k].failed;return false};
   function songFor(lvl){
     if(!lvl){lastKey=0;return track}                                  // title screen: main song
     if(!pick){                                                      // shuffle bag: every song plays once before any repeats, never twice in a row
       const ok=k=>LEVEL_SONGS[k]&&!LEVEL_SONGS[k].failed;
       bag=(Array.isArray(bag)?bag:[]).map(Number).filter(ok);
-      if(!bag.length){bag=Object.keys(LEVEL_SONGS).map(Number).filter(ok);
-        for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}
+      if(!bag.length){const mix=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+        const all=Object.keys(LEVEL_SONGS).map(Number).filter(ok),pri=mix(all.filter(k=>k>=109)),rest=mix(all.filter(k=>k<109));
+        bag=pri.concat(rest);                                            // the 13 film tracks always play first, then the rest
         if(bag.length>1&&bag[0]===lastKey)bag.push(bag.shift())}
-      pick={k:bag.length?bag.shift():0};lastKey=pick.k;store.set('br_lastSong',lastKey);store.set('br_songBag2',bag);
+      pick={k:bag.length?bag.shift():0};lastKey=pick.k;store.set('br_lastSong',lastKey);store.set('br_songBag3',bag);
     }
     return (pick.k&&levelAudio(pick.k))||track;
   }
