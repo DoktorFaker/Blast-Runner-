@@ -475,7 +475,20 @@ const Snd=(()=>{
     105:{url:'audio/music-extra5.mp3',a:null,failed:false},
     106:{url:'audio/music-extra6.mp3',a:null,failed:false},
     107:{url:'audio/music-extra7.mp3',a:null,failed:false},
-    108:{url:'audio/music-extra8.mp3',a:null,failed:false}};
+    108:{url:'audio/music-extra8.mp3',a:null,failed:false},
+    109:{url:'audio/music-extra9.mp3',a:null,failed:false},
+    110:{url:'audio/music-extra10.mp3',a:null,failed:false},
+    111:{url:'audio/music-extra11.mp3',a:null,failed:false},
+    112:{url:'audio/music-extra12.mp3',a:null,failed:false},
+    113:{url:'audio/music-extra13.mp3',a:null,failed:false},
+    114:{url:'audio/music-extra14.mp3',a:null,failed:false},
+    115:{url:'audio/music-extra15.mp3',a:null,failed:false},
+    116:{url:'audio/music-extra16.mp3',a:null,failed:false},
+    117:{url:'audio/music-extra17.mp3',a:null,failed:false},
+    118:{url:'audio/music-extra18.mp3',a:null,failed:false},
+    119:{url:'audio/music-extra19.mp3',a:null,failed:false},
+    120:{url:'audio/music-extra20.mp3',a:null,failed:false},
+    121:{url:'audio/music-extra21.mp3',a:null,failed:false}};
   function levelAudio(lvl){
     const L=LEVEL_SONGS[lvl];if(!L||L.failed)return null;
     if(!L.a){const a=new Audio();a.preload='none';a.loop=true;a.volume=.8;a.muted=mm();
@@ -483,7 +496,7 @@ const Snd=(()=>{
       a.src=L.url;L.a=a}
     return L.a;
   }
-  let pick=null,lastKey=store.get('br_lastSong',-1),bag=store.get('br_songBag',[]);   // remembered between visits, so every game start gets a fresh song
+  let pick=null,lastKey=store.get('br_lastSong',-1),bag=store.get('br_songBag2',[]);   // remembered between visits, so every game start gets a fresh song
   const L_failed=a=>{for(const k in LEVEL_SONGS)if(LEVEL_SONGS[k].a===a)return LEVEL_SONGS[k].failed;return false};
   function songFor(lvl){
     if(!lvl){lastKey=0;return track}                                  // title screen: main song
@@ -493,7 +506,7 @@ const Snd=(()=>{
       if(!bag.length){bag=Object.keys(LEVEL_SONGS).map(Number).filter(ok);
         for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}
         if(bag.length>1&&bag[0]===lastKey)bag.push(bag.shift())}
-      pick={k:bag.length?bag.shift():0};lastKey=pick.k;store.set('br_lastSong',lastKey);store.set('br_songBag',bag);
+      pick={k:bag.length?bag.shift():0};lastKey=pick.k;store.set('br_lastSong',lastKey);store.set('br_songBag2',bag);
     }
     return (pick.k&&levelAudio(pick.k))||track;
   }
