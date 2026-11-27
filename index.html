@@ -1761,7 +1761,7 @@ function setPause(on){
 /* ================= RENDER ================= */
 const cv=$('game');let cx=cv.getContext('2d');
 let R=1,floorC=null,softImg=null,vignette=null,hardCube=null,hardCubeB=null,softCube=null;
-const DEP=14;   /* 2.5D: height of the visible front face of walls and blocks */
+const DEP=16;   /* 2.5D: height of the visible front face of walls and blocks */
 function mk(w,h,fn){const c=document.createElement('canvas');c.width=Math.ceil(w*R);c.height=Math.ceil(h*R);const g=c.getContext('2d');g.scale(R,R);fn(g);return c}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function drawHard(g,x,y,border,th){
@@ -2382,18 +2382,18 @@ function drawText(s,x,y,size,c,align){
   cx.lineWidth=Math.max(3,size/4);cx.strokeStyle='#0b0718';cx.strokeText(s,x,y);cx.fillStyle=c;cx.fillText(s,x,y);
 }
 function drawRow(y){
-  for(let x=0;x<W;x++){const c=G.grid[y][x],px=x*T,py=y*T-DEP;
-    if(c===1)cx.drawImage((x===0||y===0||x===W-1||y===H-1)?hardCubeB:hardCube,px,py,T,T+DEP);
-    else if(c===2)cx.drawImage(softCube,px,py,T,T+DEP);
+  /* each cube (top + front face) fits inside its own cell, so nothing ever stands on a block */
+  for(let x=0;x<W;x++){const c=G.grid[y][x],px=x*T,py=y*T;
+    if(c===1)cx.drawImage((x===0||y===0||x===W-1||y===H-1)?hardCubeB:hardCube,px,py,T,T);
+    else if(c===2)cx.drawImage(softCube,px,py,T,T);
     else if(c===3){const p=1-(G.breaking.get(y*W+x)||0)/.5,s=1-p*.4;
-      cx.globalAlpha=1-p;cx.drawImage(softCube,px+T/2-T*s/2,py+(T+DEP)*(1-s),T*s,(T+DEP)*s);cx.globalAlpha=1}}
+      cx.globalAlpha=1-p;cx.drawImage(softCube,px+T/2-T*s/2,py+T*(1-s),T*s,T*s);cx.globalAlpha=1}}
 }
 function render(){
   cx.setTransform(R,0,0,R,0,0);cx.fillStyle='#07060f';cx.fillRect(0,0,W*T,H*T);
   if(!floorC)return;
   cx.save();
   if(G.shake>0)cx.translate(rnd(-1,1)*G.shake*.5,rnd(-1,1)*G.shake*.5);
-  {const k=(H*T)/(H*T+DEP);cx.scale(1,k);cx.translate(0,DEP)}      /* 2.5D: room for the raised top row */
   cx.drawImage(floorC,0,0,W*T,H*T);
   if(G.exit)drawExit();
   for(const [k,type] of G.items){const x=k%W,y=Math.floor(k/W);if(G.grid[y][x]===0)drawItem(x,y,type)}
