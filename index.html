@@ -2443,11 +2443,16 @@ function pickBlocks(){const R=srand(G.level*4421+9),pk=curPack();blkVar=[];
   for(let y=0;y<H;y++){blkVar.push([]);for(let x=0;x<W;x++){const edge=x===0||y===0||x===W-1||y===H-1;
     blkVar[y].push({h:edge?pk.edge:pk.hard[Math.floor(R()*pk.hard.length)],s:pk.soft[Math.floor(R()*pk.soft.length)]})}}}
 const texCubes={};
-function texCube(n,kind){const key=n+kind+R;if(texCubes[key])return texCubes[key];
+let softBox=null,softBoxKey='';
+function texCube(n,kind){
+  if(kind!=='h'){const k=G.level+'|'+R;if(softBoxKey!==k&&softImg){softBox=boxOf(softImg,softImg);softBoxKey=k}return softBox}
+  const key=n+kind+R;if(texCubes[key])return texCubes[key];
   const top=BLK[n+'_t'],side=BLK[n+'_s'];if(!top||!side)return null;
+  return texCubes[key]=boxOf(top,side)}
+function boxOf(top,side){
   /* oblique 3/4 box that fits its own cell: front face + top going back + right side */
   const S=Math.round(T*.27),F=T-S,tw=side.width,th=side.height;
-  return texCubes[key]=mk(T,T,g=>{
+  return mk(T,T,g=>{
     const face=(img,a,b,c,d,e,f,shade,light)=>{g.save();g.transform(a,b,c,d,e,f);g.drawImage(img,0,0,img.width,img.height);
       if(shade){g.fillStyle=shade;g.fillRect(0,0,img.width,img.height)}g.restore()};
     face(top,F/top.width,0,-S/top.height,S/top.height,S,0,'rgba(255,255,255,.08)');            /* top, receding back-right */
