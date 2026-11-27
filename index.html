@@ -1244,12 +1244,13 @@ function novaReady(){Snd.fx.unlock();floatText(G.player.x,G.player.y-40,'NOVA RE
 function fireNova(){
   const p=G.player;if(G.state!=='play'||G.paused||!p.alive||G.od<100)return;
   G.od=0;G.odSaid=false;G.slow=.9;G.flash=1;G.shake=24;showHint('');
-  for(const r of [1.6,3.2,5.5,8])G.rings.push({x:p.x,y:p.y,t:0,life:.5+r*.06,r:T*r,c:'255,61,240'});
-  /* NOVA wipes out every enemy on the level: bosses, armoured ones, ones still fading in, and anything they split into */
+  const NOVA_R=5;                                                     /* NOVA reaches the enemies within 5 squares */
+  for(const r of [1.4,2.8,4.2,NOVA_R])G.rings.push({x:p.x,y:p.y,t:0,life:.5+r*.06,r:T*r,c:'255,61,240'});
+  /* NOVA destroys every enemy close to the hero (bosses too, and anything they split into); the rest are untouched */
+  const near=e=>Math.hypot(e.x-p.x,e.y-p.y)<=T*NOVA_R;
   for(let pass=0;pass<6;pass++){let any=false;
-    for(const e of G.enemies.slice())if(!e.dead){any=true;e.spawn=0;e.frozen=0;let guard=20;while(!e.dead&&guard--){e.hurt=0;hurtEnemy(e)}}
+    for(const e of G.enemies.slice())if(!e.dead&&near(e)){any=true;e.spawn=0;e.frozen=0;let guard=20;while(!e.dead&&guard--){e.hurt=0;hurtEnemy(e)}}
     if(!any)break}
-  G.spawnQ=[];
   const px=cell(p.x),py=cell(p.y);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(G.grid[y][x]===2&&Math.abs(x-px)+Math.abs(y-py)<=4)breakBrick(x,y);
   for(let i=0;i<60;i++){const a=rnd(0,6.28),v=rnd(150,520);G.parts.push({x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rnd(.4,.9),max:.9,c:i%2?'#ff3df0':'#3ee8ff',s:rnd(2,4),add:1})}
   Snd.fx.nova();rumble(600,1);stat('specials');updHud(true);
