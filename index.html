@@ -1044,20 +1044,21 @@ function genLevel(n){
   const boss=L.e.includes(BOSS),nBoss=L.e.filter(t=>t===BOSS).length;
   const softs=[];
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
-    if(g[y][x]||x+y<=3)continue;
-    if(Math.abs(x-7)+Math.abs(y-6)<=2)continue;                       // keep the centre spawn clear
+    if(g[y][x]||x+y<=4)continue;                                       // keep the top-left start corner open
     if(Math.random()<L.soft*.6){g[y][x]=2;softs.push([x,y])}             // arenas: lighter cover than the old mazes
   }
   shuffle(softs);
   G.grid=g;G.items=new Map();G.breaking=new Map();G.bricksLeft=softs.length;G.fullDone=false;
   G.exit=null;G.enemies=[];
   /* portals at the corners of the arena; creatures warp in through them in groups */
-  G.portals=shuffle([[1,1],[W-2,1],[1,H-2],[W-2,H-2],[7,1],[7,H-2]]).slice(0,boss?4:3);
-  for(const [x,y] of G.portals)for(const [dx,dy] of [[0,0],...DIRS]){const a=x+dx,b=y+dy;if(g[b]&&g[b][a]===2){g[b][a]=0;G.bricksLeft--}}
-  G.spawnQ=waveRoster(n);G.waveTotal=G.spawnQ.length;
+  G.portals=[];
+  const roster=waveRoster(n);G.waveTotal=roster.length;G.spawnQ=[];
+  const free=[];for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(!g[y][x]&&x+y>=9)free.push([x,y]);   // well away from the start corner
+  shuffle(free);
+  roster.forEach((q,i)=>{const c=free[i%free.length];const e=mkEnemy(q.type,c[0],c[1]);e.spawn=.6;G.enemies.push(e)});
   G.bombs=[];G.shells=[];G.rockets=[];G.fires=[];G.grens=[];G.bolts=[];G.beams=[];G.strikes=[];G.jet=null;G.flash=0;G.rings=[];G.flames=[];G.flameSet=new Set();G.parts=[];G.floats=[];G.pending=[];
   G.exitOpen=false;G.exitCd=0;G.timeUp=false;G.hurry=false;G.time=0;G.gems=[];G.combo=0;G.comboT=0;G.slow=0;
-  G.player={x:T*7.5,y:T*6.5,face:'down',moving:false,anim:0,alive:true,deadT:0,wall:G.wallpass,bombpass:G.bombpass,skin:curSkin()};
+  G.player={x:T*1.5,y:T*1.5,face:'down',moving:false,anim:0,alive:true,deadT:0,wall:G.wallpass,bombpass:G.bombpass,skin:curSkin()};
   buildStatic();
 }
 const L_BOSS=n=>LEVELS[(n-1)%LEVELS.length].e.includes(BOSS);
@@ -1249,8 +1250,8 @@ function fireNova(){
 }
 /* respawn in the same wave at the safest free spot */
 function respawn(){
-  let best=null,bd=-1;for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){if(G.grid[y][x]||bombAt(x,y))continue;
-    const d=Math.min(99,...G.enemies.filter(e=>!e.dead).map(e=>Math.hypot(e.x-(x*T+T/2),e.y-(y*T+T/2))/T));if(d>bd){bd=d;best=[x,y]}}
+  for(const [x,y] of [[1,1],[2,1],[1,2],[3,1],[1,3]])if(G.grid[y][x]===2){G.grid[y][x]=0;G.bricksLeft--}   // always a way out of the corner
+  const best=[1,1];
   const p=G.player;p.x=best[0]*T+T/2;p.y=best[1]*T+T/2;p.alive=true;p.deadT=0;p.dance=null;G.state='play';G.inv=2.6;G.combo=0;
   G.rings.push({x:p.x,y:p.y,t:0,life:.6,r:T*1.5,c:'62,232,255'});updHud(true);
 }
