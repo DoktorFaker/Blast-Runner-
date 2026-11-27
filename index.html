@@ -1245,7 +1245,11 @@ function fireNova(){
   const p=G.player;if(G.state!=='play'||G.paused||!p.alive||G.od<100)return;
   G.od=0;G.odSaid=false;G.slow=.9;G.flash=1;G.shake=24;showHint('');
   for(const r of [1.6,3.2,5.5,8])G.rings.push({x:p.x,y:p.y,t:0,life:.5+r*.06,r:T*r,c:'255,61,240'});
-  for(const e of G.enemies)if(!e.dead&&e.spawn<=0){e.hurt=0;hurtEnemy(e);if(!e.dead){e.hurt=0;hurtEnemy(e)}}
+  /* NOVA wipes out every enemy on the level: bosses, armoured ones, ones still fading in, and anything they split into */
+  for(let pass=0;pass<6;pass++){let any=false;
+    for(const e of G.enemies.slice())if(!e.dead){any=true;e.spawn=0;e.frozen=0;let guard=20;while(!e.dead&&guard--){e.hurt=0;hurtEnemy(e)}}
+    if(!any)break}
+  G.spawnQ=[];
   const px=cell(p.x),py=cell(p.y);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(G.grid[y][x]===2&&Math.abs(x-px)+Math.abs(y-py)<=4)breakBrick(x,y);
   for(let i=0;i<60;i++){const a=rnd(0,6.28),v=rnd(150,520);G.parts.push({x:p.x,y:p.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rnd(.4,.9),max:.9,c:i%2?'#ff3df0':'#3ee8ff',s:rnd(2,4),add:1})}
   Snd.fx.nova();rumble(600,1);stat('specials');updHud(true);
