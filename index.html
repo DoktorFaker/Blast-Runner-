@@ -918,9 +918,9 @@ const LAST=LEVELS.length;
 
 /* ---- skins, special weapons, dances: unlocked by lifetime statistics ---- */
 const SKINS=[
+  {id:'r2',name:'R2-D2',spr:'r2',acc:'#4a8aff',b1:'#e8ecf4',b2:'#2a5ad0',belt:'#4a8aff',eye:'#ff2a2a'},
   {id:'classic',name:'CLASSIC',acc:'#ff4f8b',b1:'#4f7bff',b2:'#1c2f9e',belt:'#ffc83d',eye:'#3ee8ff'},
   {id:'volt',name:'VOLT',spr:'hero',acc:'#3ee8ff',b1:'#2a3a5a',b2:'#0e1424',belt:'#3ee8ff',eye:'#3ee8ff'},
-  {id:'r2',name:'R2-D2',spr:'r2',acc:'#4a8aff',b1:'#e8ecf4',b2:'#2a5ad0',belt:'#4a8aff',eye:'#ff2a2a'},
   {id:'recon',name:'RECON',spr:'soldier',acc:'#c8ff3d',b1:'#4a4a52',b2:'#1a1a20',belt:'#c8ff3d',eye:'#ffe040'},
   {id:'crimson',name:'CRIMSON',acc:'#ffd23d',b1:'#ff5a4a',b2:'#8e1616',belt:'#2a1a1a',eye:'#ffec5e'},
   {id:'ocean',name:'OCEAN',acc:'#3df5c4',b1:'#2ad0e0',b2:'#0b4a6a',belt:'#ffffff',eye:'#7dffea'},
@@ -1584,7 +1584,8 @@ function checkUnlocks(){
 }
 const curWeapon=()=>{const id=store.get('br_weapon','');const w=WEAPONS.find(w=>w.id===id&&unlocked(w));return w||WEAPONS.find(unlocked)||null};
 const curDance=()=>{const id=store.get('br_dance','wave');return DANCES.find(d=>d.id===id&&unlocked(d))||DANCES[0]};
-const curSkin=()=>{const id=store.get('br_skin','classic');return SKINS.find(k=>k.id===id&&unlocked(k))||SKINS[0]};
+if(!store.get('br_r2default',false)){store.set('br_skin','r2');store.set('br_r2default',true)}   /* R2-D2 is the default hero */
+const curSkin=()=>{const id=store.get('br_skin','r2');return SKINS.find(k=>k.id===id&&unlocked(k))||SKINS[0]};
 function cycleWeapon(){const u=WEAPONS.filter(unlocked);if(u.length<2)return;const c=curWeapon();store.set('br_weapon',u[(u.indexOf(c)+1)%u.length].id);updHud(true);syncPauseBtns();
   const w=curWeapon();if(G.player&&G.state==='play')floatText(G.player.x,G.player.y-30,w.name,w.c)}
 function cycleDance(){const u=DANCES.filter(unlocked);const c=curDance();store.set('br_dance',u[(u.indexOf(c)+1)%u.length].id);syncPauseBtns()}
