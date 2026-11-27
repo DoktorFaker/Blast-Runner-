@@ -23,6 +23,10 @@
 html,body{height:100%}
 @supports (height:100dvh){html,body,#app{height:100dvh}}
 html.vvfix,html.vvfix body,html.vvfix #app{height:var(--vvh)}
+html.vvfix #app{position:fixed;left:0;right:0;top:var(--vvt,0px)}
+#vis-sentinel{position:fixed;inset:0;pointer-events:none;visibility:hidden;z-index:-1}
+html.vvfix .ov{top:var(--vvt,0px);bottom:auto;height:var(--vvh)}
+html.vvfix .toast{top:calc(var(--vvt,0px) + 12px)}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;
   user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -437,6 +441,7 @@ body:not(.touchdev) .note:not(.warn){display:none}
 </div>
 
 <div id="toast" class="toast" hidden></div>
+<div id="vis-sentinel" aria-hidden="true"></div>
 
 <div id="ovEnd" class="ov" hidden>
   <div class="card">
@@ -2656,9 +2661,18 @@ $('skNext').onclick=()=>{skinIdx=(skinIdx+1)%SKINS.length;showSkin();Snd.fx.ui()
 $('bDance').onclick=()=>startDance();
 $('bFull').onclick=()=>toggleFs();
 if(!ALLOW_FS)$('bFull').hidden=true;   // always offered: real full screen, or a fallback when it's blocked
+/* the part of the game that is really on the user's screen: the browser's visual viewport, clipped by the host page
+   when the game runs inside an embedded viewer (an IntersectionObserver on a full-size sentinel reports that clip) */
+let visClip=null;
 function syncViewport(){const v=window.visualViewport,de=document.documentElement;
-  if(v){de.style.setProperty('--vvh',Math.round(v.height)+'px');de.style.setProperty('--vvb',Math.max(0,Math.round(innerHeight-(v.offsetTop+v.height)))+'px');de.classList.add('vvfix')}
+  let top=0,h=innerHeight;
+  if(v){top=v.offsetTop;h=v.height}
+  if(visClip&&visClip.height>120){const t2=Math.max(top,visClip.top),b2=Math.min(top+h,visClip.bottom);if(b2-t2>120){top=t2;h=b2-t2}}
+  de.style.setProperty('--vvt',Math.round(top)+'px');de.style.setProperty('--vvh',Math.round(h)+'px');
+  de.style.setProperty('--vvb',Math.max(0,Math.round(innerHeight-(top+h)))+'px');de.classList.add('vvfix');
   fit()}
+if(window.IntersectionObserver){const th=[];for(let i=0;i<=100;i++)th.push(i/100);
+  new IntersectionObserver(es=>{for(const e of es){const r=e.intersectionRect;visClip=e.isIntersecting&&r.height>0?{top:r.top,bottom:r.bottom,height:r.height}:null}syncViewport()},{threshold:th}).observe(document.getElementById('vis-sentinel'))}
 const settle=()=>{for(const t of [0,120,400,900,1600])setTimeout(()=>{syncViewport();if(G.theme)drawSky(G.theme)},t)};
 document.addEventListener('fullscreenchange',settle);document.addEventListener('webkitfullscreenchange',settle);
 if(window.visualViewport){visualViewport.addEventListener('resize',settle);visualViewport.addEventListener('scroll',syncViewport)}
