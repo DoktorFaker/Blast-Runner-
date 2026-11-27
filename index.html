@@ -22,6 +22,7 @@
 }
 html,body{height:100%}
 @supports (height:100dvh){html,body,#app{height:100dvh}}
+html.vvfix,html.vvfix body,html.vvfix #app{height:var(--vvh)}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;
   user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -68,7 +69,7 @@ body:not(.touch):not(.touchdev) [data-pad]::after,body.gp [data-pad]::after{disp
 .pb{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;box-sizing:border-box;border-radius:10px;font:700 10px/1 system-ui,-apple-system,'Segoe UI',sans-serif;font-style:normal;color:#fff;background:#2b2b33;vertical-align:middle;margin:0 2px}
 .pb.pa{background:#5bb434}.pb.pbb{background:#e5463b}.pb.px{background:#3f7ee8}.pb.py{background:#f3c623;color:#1a1400}
 .padfocus{outline:3px solid #5bb434!important;outline-offset:3px}
-body.touch #pad{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-between;align-items:flex-end;pointer-events:none;
+body.touch #pad{display:flex;position:fixed;left:0;right:0;bottom:var(--vvb,0px);z-index:30;justify-content:space-between;align-items:flex-end;pointer-events:none;
   padding:0 max(14px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
 body.touch #pad>*{pointer-events:auto}
 body.touch #app{padding-bottom:214px}
@@ -1670,7 +1671,8 @@ const SHOW_TIPS=false;                                           // no in-game c
 /* ================= FULL SCREEN + LANDSCAPE (phones) ================= */
 const ALLOW_FS=false;                                               // the CrazyGames build turns this off (they provide fullscreen)
 const isIOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const fsApi=()=>{const d=document.documentElement;return d.requestFullscreen?'std':d.webkitRequestFullscreen?'webkit':null};
+const fsApi=()=>{const d=document.documentElement;if(document.fullscreenEnabled===false&&document.webkitFullscreenEnabled!==true)return null;return d.requestFullscreen?'std':d.webkitRequestFullscreen?'webkit':null};
+const framed=(()=>{try{return window.top!==window}catch(e){return true}})();
 const inFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement)||matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches||navigator.standalone===true;
 function lockLandscape(){try{const o=screen.orientation;if(o&&o.lock)o.lock('landscape').catch(()=>{})}catch(e){}}
 function enterFs(){
@@ -1680,9 +1682,15 @@ function enterFs(){
     if(r&&r.then)r.then(lockLandscape).catch(()=>{});else lockLandscape()}catch(e){}
 }
 function exitFs(){try{if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});else if(document.webkitExitFullscreen)document.webkitExitFullscreen()}catch(e){}}
+function openOwnTab(){let w=null;try{w=window.open(location.href,'_blank')}catch(e){}
+  if(w)toast('⛶ GAME OPENED IN ITS OWN TAB','Full screen is blocked inside this viewer. Use ⛶ in the new tab.');
+  else toast('⛶ FULL SCREEN IS BLOCKED HERE','Open the game link in Safari or Chrome directly, then tap ⛶.')}
 function toggleFs(){
-  if(!fsApi()&&isIOS){toast('📱 FULL SCREEN ON IPHONE','Tap Share ⬆ then "Add to Home Screen" and open the game from there. Turn your phone sideways.');return}
-  (document.fullscreenElement||document.webkitFullscreenElement)?exitFs():enterFs();
+  if(document.fullscreenElement||document.webkitFullscreenElement){exitFs();return}
+  if(!fsApi()){if(framed){openOwnTab();return}
+    if(isIOS){toast('📱 FULL SCREEN','Tap Share ⬆ then "Add to Home Screen" and open the game from there. Turn the device sideways.');return}}
+  enterFs();
+  setTimeout(()=>{if(!(document.fullscreenElement||document.webkitFullscreenElement)&&!inFs()){if(framed)openOwnTab();else if(isIOS)toast('📱 FULL SCREEN','Tap Share ⬆ then "Add to Home Screen" and open the game from there.')}},700);
 }
 let fsAsked=false;
 function autoFs(){if(fsAsked||!ALLOW_FS||!document.body.classList.contains('touchdev'))return;fsAsked=true;if(fsApi())enterFs()}
@@ -2647,8 +2655,14 @@ $('skPrev').onclick=()=>{skinIdx=(skinIdx+SKINS.length-1)%SKINS.length;showSkin(
 $('skNext').onclick=()=>{skinIdx=(skinIdx+1)%SKINS.length;showSkin();Snd.fx.ui()};
 $('bDance').onclick=()=>startDance();
 $('bFull').onclick=()=>toggleFs();
-if(!ALLOW_FS||(!fsApi()&&!isIOS))$('bFull').hidden=true;
-document.addEventListener('fullscreenchange',()=>setTimeout(fit,80));document.addEventListener('webkitfullscreenchange',()=>setTimeout(fit,80));
+if(!ALLOW_FS)$('bFull').hidden=true;   // always offered: real full screen, or a fallback when it's blocked
+function syncViewport(){const v=window.visualViewport,de=document.documentElement;
+  if(v){de.style.setProperty('--vvh',Math.round(v.height)+'px');de.style.setProperty('--vvb',Math.max(0,Math.round(innerHeight-(v.offsetTop+v.height)))+'px');de.classList.add('vvfix')}
+  fit()}
+const settle=()=>{for(const t of [0,120,400,900,1600])setTimeout(()=>{syncViewport();if(G.theme)drawSky(G.theme)},t)};
+document.addEventListener('fullscreenchange',settle);document.addEventListener('webkitfullscreenchange',settle);
+if(window.visualViewport){visualViewport.addEventListener('resize',settle);visualViewport.addEventListener('scroll',syncViewport)}
+addEventListener('orientationchange',settle);addEventListener('pageshow',settle);setTimeout(syncViewport,0);
 if(isIOS&&ALLOW_FS&&!inFs())setTimeout(()=>{if(matchMedia('(orientation: portrait)').matches)toast('📱 TURN YOUR PHONE SIDEWAYS','For full screen: Share ⬆ → "Add to Home Screen"')},1500);
 $('bPW').onclick=()=>cycleWeapon();$('bPD').onclick=()=>cycleDance();
 for(const b of document.querySelectorAll('.back'))b.onclick=()=>{for(const id of ['ovHof','ovStats','ovUnl'])$(id).hidden=true;$('ovTitle').hidden=false;showSkin()};
